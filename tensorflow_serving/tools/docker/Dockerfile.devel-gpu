@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
+FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 
 RUN apt-get update && apt-get install -y \
         build-essential \
@@ -21,10 +21,6 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get install python-pip python-dev build-essential
-
-#RUN curl -fSsL -O https://bootstrap.pypa.io/get-pip.py && \
-#    python get-pip.py && \
-#    rm get-pip.py
 
 # Set up grpc
 
@@ -70,7 +66,11 @@ RUN mkdir /bazel && \
 # Download TensorFlow Serving
 RUN git clone --recurse-submodules https://github.com/tensorflow/serving && \
   cd serving && \
-  git checkout
+  git checkout r1.5 && \
+  git clone https://github.com/tensorflow/tensorflow.git && \
+  cd tensorflow && \
+  git checkout 37aa430 && \
+  cd /serving
 
 # Build TensorFlow with the CUDA configuration
 ENV CI_BUILD_PYTHON python
@@ -85,7 +85,7 @@ RUN mkdir /usr/lib/x86_64-linux-gnu/include/ && \
   ln -s /usr/lib/x86_64-linux-gnu/include/cudnn.h /usr/lib/x86_64-linux-gnu/include/cudnn.h && \
   ln -s /usr/include/cudnn.h /usr/local/cuda/include/cudnn.h && \
   ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so /usr/local/cuda/lib64/libcudnn.so && \
-  ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.6 /usr/local/cuda/lib64/libcudnn.so.6
+  ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.7 /usr/local/cuda/lib64/libcudnn.so.7
 
 
 # Configure Tensorflow to use the GPU
@@ -99,5 +99,8 @@ RUN bazel build -c opt --config=cuda \
     tensorflow_serving/model_servers:tensorflow_model_server && \
     cp bazel-bin/tensorflow_serving/model_servers/tensorflow_model_server /usr/local/bin/ && \
     bazel clean --expunge
+
+# Cleanup all source code
+RUN rm -rf /serving
 
 CMD ["/bin/bash"]
